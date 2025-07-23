@@ -19,15 +19,32 @@ class MyApp extends StatelessWidget {
 class TaskListScreen extends StatelessWidget {
   const TaskListScreen({super.key});
 
+  // Nossa lista de dados falsos
+  final List<String> tasks = const [
+    'Comprar leite',
+    'Terminar o projeto Flutter',
+    'Passear com o cachorro',
+    'Ligar para a mamãe',
+    'Ler um capítulo do livro',
+    'Fazer exercício',
+    'Pagar a conta de luz',
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Lista de Tarefas'), centerTitle: true),
-      body: const Center(
-        child: Text(
-          'Aqui ficará a nossa lista de tarefas!',
-          style: TextStyle(fontSize: 18),
-        ),
+      body: ListView.builder(
+        itemCount: tasks.length,
+        itemBuilder: (context, index) {
+          return ListTile(
+            leading: const Icon(Icons.check_box_outline_blank),
+            title: Text(tasks[index]),
+            onTap: () {
+              print('"${tasks[index]}" foi tocado!');
+            },
+          );
+        },
       ),
     );
   }
