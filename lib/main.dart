@@ -68,6 +68,98 @@ class _TaskListScreenState extends State<TaskListScreen> {
     }
   }
 
+  // Adicione esta função dentro da classe _TaskListScreenState
+  Future<void> updateTask(String id, bool currentStatus) async {
+    // Substitua pelo IP da sua máquina!
+    final url = Uri.parse('http://192.168.10.160:3000/api/todos/$id');
+    try {
+      final response = await http.put(
+        url,
+        // Cabeçalho para informar a API que estamos a enviar JSON
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+        // Corpo do pedido com o novo estado de 'completed'
+        body: jsonEncode({'completed': !currentStatus}),
+      );
+
+      if (response.statusCode == 200) {
+        // Se a API confirmar a alteração, buscamos a lista novamente
+        // para garantir que a UI está 100% sincronizada com o banco de dados.
+        await fetchTasks();
+      } else {
+        print(
+          'Falha ao atualizar a tarefa. Status code: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print('Erro de conexão ao atualizar tarefa: $e');
+    }
+  }
+
+  // Adicione esta função dentro da classe _TaskListScreenState
+  Future<void> _showAddTaskDialog() async {
+    // Um controller para ler o texto do campo de input
+    final TextEditingController textFieldController = TextEditingController();
+
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Adicionar Nova Tarefa'),
+          content: TextField(
+            controller: textFieldController,
+            decoration: const InputDecoration(
+              hintText: "Digite o texto da tarefa",
+            ),
+            autofocus: true, // Foca no campo de texto automaticamente
+          ),
+          actions: <Widget>[
+            // Botão de Cancelar
+            TextButton(
+              child: const Text('Cancelar'),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // Fecha o diálogo
+              },
+            ),
+            // Botão de Adicionar
+            TextButton(
+              child: const Text('Adicionar'),
+              onPressed: () {
+                final String taskText = textFieldController.text;
+                // Só adiciona se o texto não estiver vazio
+                if (taskText.isNotEmpty) {
+                  createTask(taskText); // Chama a função que fará o POST
+                  Navigator.of(dialogContext).pop(); // Fecha o diálogo
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Adicione esta função dentro da classe _TaskListScreenState
+  Future<void> createTask(String text) async {
+    // Substitua pelo IP da sua máquina!
+    final url = Uri.parse('http://192.168.10.160:3000/api/todos');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json; charset=UTF-8'},
+        body: jsonEncode({'text': text}), // Enviamos o texto da nova tarefa
+      );
+
+      if (response.statusCode == 201) {
+        // 201 Created é a resposta padrão para um POST bem-sucedido
+        await fetchTasks(); // Recarrega a lista para mostrar a nova tarefa
+      } else {
+        print('Falha ao criar a tarefa. Status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Erro de conexão ao criar tarefa: $e');
+    }
+  }
+
   // 4. O método build, que desenha a UI
   @override
   Widget build(BuildContext context) {
@@ -77,7 +169,16 @@ class _TaskListScreenState extends State<TaskListScreen> {
       // Se não, mostra a lista.
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
+          : _tasks
+                .isEmpty // <- AQUI ESTÁ A NOVA VERIFICAÇÃO
+          ? const Center(
+              child: Text(
+                'Nenhuma tarefa encontrada!',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            )
           : ListView.builder(
+              // O nosso ListView.builder atual
               itemCount: _tasks.length,
               itemBuilder: (context, index) {
                 final task = _tasks[index];
@@ -91,9 +192,20 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   ),
                   // O texto da tarefa
                   title: Text(task['text']),
+                  onTap: () {
+                    updateTask(task['_id'], task['completed'] ?? false);
+                  },
                 );
               },
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Esta função irá abrir o nosso diálogo de adição
+          _showAddTaskDialog();
+        },
+        tooltip: 'Adicionar Tarefa',
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }
